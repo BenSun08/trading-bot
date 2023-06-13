@@ -1,0 +1,2 @@
+include trading-bot/schema.sql
+global-exclude *.py

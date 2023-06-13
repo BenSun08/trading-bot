@@ -1,0 +1,14 @@
+[project]
+name="trading-bot"
+version="0.1.0"
+dependencies = [
+    "flask",
+    "flask-socketio",
+    "alpaca-py",
+    "gunicorn",
+    "gevent"
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
