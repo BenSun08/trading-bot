@@ -14,6 +14,10 @@ thread_lock = Lock()
 conns = {}
 
 tradeBot = AlpacaTradeBot()
+dataBots = {
+    "crypto": AlpacaDataBot("crypto"),
+    "stock": AlpacaDataBot("stock")
+}
 @bp.route('/account', methods=["GET"])
 def get_account():
     account = tradeBot.get_account()
@@ -51,13 +55,20 @@ def make_order(side):
     order = { "symbol": o.symbol, "qty": o. qty, "side": o.side, "filled_avg_price": o.filled_avg_price }
     return order
 
-@bp.route('/ws/start', methods=["GET"])
-def start_ws():
-    symbol = request.args.get("symbol")
-    liveBot = AlpacaRealTimeBot("us_equity")
-    conns[symbol] = liveBot
-    liveBot.subscribe(symbol)
-    return "started"
+@bp.route('/market-data/<type>/historical')
+def get_data(type):
+    symbol = request.form["symbol"]
+    start = request.form["start"]
+    end = request.form["end"]
+    d = dataBots[type].get_history(symbol_or_symbol=symbol, start=start, end=end)
+    return d.json()
+
+@bp.route('/market-data/<type>/quote')
+def get_data(type):
+    symbol = request.form["symbol"]
+    d = dataBots[type].get_latest_quote(symbol_or_symbols=symbol)
+    return d.json()
+
 
 @socketio.on('connect')
 def connect():
@@ -68,18 +79,17 @@ def connect():
 @socketio.on('subscribe')
 def subscribe(msg):
     print(msg)
-    print(request.sid)
     type = msg['type']
     symbols = msg['symbols']
 
-    if type == 'us_equity' or type == 'crypto':
-        liveBot = AlpacaRealTimeBot(type)
-    else:
-        emit('error', {'data': 'Invalid type'})
-        return
-    conns[request.sid] = liveBot
+    # if type == 'us_equity' or type == 'crypto':
+    #     liveBot = AlpacaRealTimeBot(type)
+    # else:
+    #     socketio.emit('error', {'data': 'Invalid type'})
+    #     return
+    # conns[request.sid] = liveBot
 
-    liveBot.subscribe(symbols)
+    # liveBot.subscribe(symbols)
 
     # def background_thread():
     #     liveBot.subscribe(symbols)
@@ -89,16 +99,19 @@ def subscribe(msg):
     #         thread = socketio.start_background_task(background_thread)
 
 
-    # bot = AlpacaDataBot(type=type)
-    # def background_thread():
-    #     while True:
-    #         socketio.sleep(1)
-    #         socketio.emit('data', bot.get_latest_quote(symbol_or_symbols=symbols).json())
-    # global thread
-    # with thread_lock:
-    #     if thread is None:
-    #         thread = socketio.start_background_task(background_thread)
+    bot = AlpacaDataBot(type=type)
+    def background_thread():
+        while True:
+            socketio.sleep(1)
+            socketio.emit('data', bot.get_latest_quote(symbol_or_symbols=symbols).json())
+    global thread
+    with thread_lock:
+        if thread is None:
+            thread = socketio.start_background_task(background_thread)
 
+@socketio.event
+def my_ping():
+    socketio.emit('my_pong')
 
 @socketio.on('disconnect')
 def disconnect():

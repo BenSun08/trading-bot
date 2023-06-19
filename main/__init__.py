@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, render_template 
 from flask_socketio import SocketIO 
 
 socketio = SocketIO()
@@ -24,6 +24,10 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
+
+    @app.route('/')
+    def index():
+        return render_template('index.html', async_mode=socketio.async_mode)
 
     from . import db
     db.init_app(app)

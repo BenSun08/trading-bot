@@ -83,7 +83,7 @@ class AlpacaDataBot:
     def get_latest_quote(self, symbol_or_symbols):
         if self.type == "crypto":
             request_params = CryptoLatestQuoteRequest(symbol_or_symbols=symbol_or_symbols)
-            latest_quote = self.client.get_crypto_latest_quote(request_params)
+            latest_quote = self.client.get_crypto_latest_quote(request_params, feed="us")
         else:
             request_params = StockLatestQuoteRequest(symbol_or_symbols=symbol_or_symbols)
             latest_quote = self.client.get_stock_latest_quote(request_params)
@@ -93,7 +93,7 @@ class AlpacaDataBot:
     def get_history(self, symbol_or_symbols, start, end):
         if self.type == "crypto":
             request_params = CryptoBarsRequest(
-                            symbol_or_symbols=["BTC/USD", "ETH/USD"],
+                            symbol_or_symbols=symbol_or_symbols,
                             timeframe=TimeFrame.Day,
                             start=datetime(start),
                             end=datetime(end)
@@ -125,8 +125,9 @@ class AlpacaRealTimeBot:
     def subscribe(self, symbols):
         print(symbols)
         async def quote_handler(data):
-            print(data.json())
-            socketio.emit('data', data.json())
+            rsp = data.json()
+            # print(rsp)
+            socketio.emit('data', rsp)
 
         async def trade_handler(data):
             print(data.json())
@@ -137,9 +138,9 @@ class AlpacaRealTimeBot:
             socketio.emit('data', data.json())
 
         self.data_stream.subscribe_quotes(quote_handler, *symbols)
-        self.data_stream.subscribe_trades(trade_handler, *symbols)
-        self.data_stream.subscribe_updated_bars(updated_bar_handler, *symbols)
-
+        # self.data_stream.subscribe_trades(trade_handler, *symbols)
+        # self.data_stream.subscribe_updated_bars(updated_bar_handler, *symbols)
+        socketio.emit('data', "subscribed")
         self.data_stream.run()
     
     def unsubscribe(self, symbols):
